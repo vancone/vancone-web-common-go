@@ -52,28 +52,28 @@ func ReadConfig() *viper.Viper {
 		log.Println("Failed to process encrypted keys", err)
 	}
 
-	initAppConfig()
-	initMail()
-	initServer()
+	initAppConfig(viperConfig)
+	initMailConfig(viperConfig)
+	initServerConfig(viperConfig)
 	return viperConfig
 }
 
-func initAppConfig() {
-	err := viper.UnmarshalKey("app", &App)
+func initAppConfig(viperConfig *viper.Viper) {
+	err := viperConfig.UnmarshalKey("app", &App)
 	if err != nil {
 		log.Println("viper unmarshal err:", err)
 	}
 }
 
-func initMail() {
-	err := viper.UnmarshalKey("mail", &Mail)
+func initMailConfig(viperConfig *viper.Viper) {
+	err := viperConfig.UnmarshalKey("mail", &Mail)
 	if err != nil {
 		log.Println("viper unmarshal err:", err)
 	}
 }
 
-func initServer() {
-	err := viper.UnmarshalKey("server", &Server)
+func initServerConfig(viperConfig *viper.Viper) {
+	err := viperConfig.UnmarshalKey("server", &Server)
 	if err != nil {
 		log.Println("viper unmarshal err:", err)
 	}
