@@ -1,8 +1,9 @@
 package response
 
 import (
-	"gorm.io/gorm"
 	"math"
+
+	"gorm.io/gorm"
 )
 
 type ResponsePage[T any] struct {
