@@ -45,7 +45,7 @@ func Paginate[T any](db *gorm.DB, pageNo int, pageSize int, result *Page[T]) err
 		return err
 	}
 
-	// Set response data
+	// Set server data
 	result.TotalCount = totalCount
 	result.TotalPage = int64(totalPage)
 	result.PageSize = int64(pageSize)
