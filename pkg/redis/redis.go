@@ -13,7 +13,7 @@ var Client *redis.Client
 var localConfig Config
 
 type Config struct {
-	Addr     string
+	Url      string
 	Password string
 }
 
@@ -25,7 +25,7 @@ func Init(viper *viper.Viper) {
 	}
 
 	Client = redis.NewClient(&redis.Options{
-		Addr:     localConfig.Addr,
+		Addr:     localConfig.Url,
 		Password: localConfig.Password,
 		DB:       0,
 	})

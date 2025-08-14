@@ -33,7 +33,7 @@ app:
   name:
 database:
   url:
-  user:
+  username:
   password:
 mail:
   protocol:
@@ -42,8 +42,8 @@ mail:
   username:
   password:
 redis:
-  addr:
-  passwrod:
+  url:
+  password:
 server:
   port:
 ```

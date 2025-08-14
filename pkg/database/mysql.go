@@ -14,7 +14,7 @@ var DbConfig Config
 
 type Config struct {
 	Url      string
-	User     string
+	Username string
 	Password string
 }
 
@@ -25,7 +25,7 @@ func Init(viper *viper.Viper) {
 		return
 	}
 
-	dsn := fmt.Sprintf("%s:%s@%s", DbConfig.User, DbConfig.Password, DbConfig.Url)
+	dsn := fmt.Sprintf("%s:%s@%s", DbConfig.Username, DbConfig.Password, DbConfig.Url)
 	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalln("mysql connect error", err)
