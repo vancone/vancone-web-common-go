@@ -14,12 +14,13 @@ func CrossOriginMiddleware(context *gin.Context) {
 		if allowOrigin[len(allowOrigin)-1] == '/' {
 			allowOrigin = allowOrigin[0 : len(allowOrigin)-1]
 		}
+		context.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Accept, Origin, Cache-Control, X-Requested-With")
 		context.Header("Access-Control-Allow-Origin", allowOrigin)
 		context.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		context.Header("Access-Control-Allow-Credentials", "true")
 	}
 
-	if method == "OPTIONS" {
-		context.AbortWithStatus(http.StatusOK)
+	if method == http.MethodOptions {
+		context.AbortWithStatus(http.StatusNoContent)
 	}
 }
