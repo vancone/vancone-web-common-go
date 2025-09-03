@@ -6,6 +6,7 @@ require (
 	github.com/Mystery00/go-jasypt v1.0.3
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-redis/redis/v8 v8.11.5
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	gorm.io/driver/mysql v1.6.0
