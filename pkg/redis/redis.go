@@ -2,11 +2,10 @@ package redis
 
 import (
 	"context"
-	"fmt"
-	"log"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/spf13/viper"
+	"github.com/vancone/vancone-web-common-go/pkg/logger"
 )
 
 var Client *redis.Client
@@ -20,7 +19,7 @@ type Config struct {
 func Init(viper *viper.Viper) {
 	err := viper.UnmarshalKey("redis", &localConfig)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 		return
 	}
 
@@ -32,6 +31,6 @@ func Init(viper *viper.Viper) {
 
 	_, err = Client.Ping(context.Background()).Result()
 	if err != nil {
-		fmt.Println("Failed to connect to Redis", err)
+		logger.Errorf("Failed to connect to Redis: %v", err)
 	}
 }

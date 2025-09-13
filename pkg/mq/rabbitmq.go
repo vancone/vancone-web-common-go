@@ -2,13 +2,13 @@ package mq
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
+	"github.com/vancone/vancone-web-common-go/pkg/logger"
 )
 
 var RabbitMqConfig Config
@@ -23,7 +23,7 @@ type Config struct {
 func Init(viper *viper.Viper, handler func(delivery amqp091.Delivery)) {
 	err := viper.UnmarshalKey("rabbitmq", &RabbitMqConfig)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 		return
 	}
 
@@ -74,19 +74,19 @@ func Init(viper *viper.Viper, handler func(delivery amqp091.Delivery)) {
 		}
 	}()
 
-	log.Printf(" [*] Waiting for message")
+	logger.Info(" [*] Waiting for message")
 
 	// 等待中断信号优雅退出
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	<-sigChan
-	log.Println("Exiting...")
+	logger.Info("Exiting...")
 	forever <- true
 
 }
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		log.Printf("%s: %s", msg, err)
+		logger.Infof("%s: %s", msg, err)
 	}
 }

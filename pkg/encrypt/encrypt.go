@@ -2,12 +2,12 @@ package encrypt
 
 import (
 	"errors"
-	"log"
 	"os"
 
 	"github.com/Mystery00/go-jasypt"
 	"github.com/Mystery00/go-jasypt/iv"
 	"github.com/Mystery00/go-jasypt/salt"
+	"github.com/vancone/vancone-web-common-go/pkg/logger"
 )
 
 const (
@@ -21,7 +21,7 @@ func init() {
 	const cryptKeyName = "VANCONE_CRYPT_KEY"
 	password = os.Getenv(cryptKeyName)
 	if password == "" {
-		log.Printf("Failed to read environment variable '%s', you should set the variable first\n", cryptKeyName)
+		logger.Errorf("Failed to read environment variable '%s', you should set the variable first", cryptKeyName)
 	}
 }
 

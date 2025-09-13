@@ -2,9 +2,9 @@ package database
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/spf13/viper"
+	"github.com/vancone/vancone-web-common-go/pkg/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -21,16 +21,16 @@ type Config struct {
 func Init(viper *viper.Viper) {
 	err := viper.UnmarshalKey("database", &DbConfig)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 		return
 	}
 
 	dsn := fmt.Sprintf("%s:%s@%s", DbConfig.Username, DbConfig.Password, DbConfig.Url)
 	Db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalln("mysql connect error", err)
+		logger.Fatalf("mysql connect error: %v", err)
 	}
 	if Db.Error != nil {
-		log.Fatalln("database error", Db.Error)
+		logger.Fatalf("database error: %v", Db.Error)
 	}
 }

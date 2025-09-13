@@ -3,11 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/vancone/vancone-web-common-go/pkg/encrypt"
+	"github.com/vancone/vancone-web-common-go/pkg/logger"
 )
 
 var App AppConfig
@@ -44,12 +44,12 @@ func ReadConfig() *viper.Viper {
 	if err := viperConfig.ReadInConfig(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
-			log.Fatalln("Config file not found")
+			logger.Fatal("Config file not found")
 		}
 	}
 	err := processEncryptedKeys(viperConfig)
 	if err != nil {
-		log.Println("Failed to process encrypted keys", err)
+		logger.Fatalf("Failed to process encrypted keys: %v", err)
 	}
 
 	initAppConfig(viperConfig)
@@ -61,21 +61,21 @@ func ReadConfig() *viper.Viper {
 func initAppConfig(viperConfig *viper.Viper) {
 	err := viperConfig.UnmarshalKey("app", &App)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 	}
 }
 
 func initMailConfig(viperConfig *viper.Viper) {
 	err := viperConfig.UnmarshalKey("mail", &Mail)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 	}
 }
 
 func initServerConfig(viperConfig *viper.Viper) {
 	err := viperConfig.UnmarshalKey("server", &Server)
 	if err != nil {
-		log.Println("viper unmarshal err:", err)
+		logger.Errorf("viper unmarshal err: %v", err)
 	}
 	if Server.Port == 0 {
 		Server.Port = 8080

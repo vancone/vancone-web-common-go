@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,7 +19,7 @@ func StartServer(g *gin.Engine) {
 	g.Use(GinZapLogger(logger.SugaredLogger.Desugar()), gin.RecoveryWithWriter(gin.DefaultErrorWriter))
 	err := g.Run(fmt.Sprintf(":%d", config.Server.Port))
 	if err != nil {
-		log.Panicln("Failed to start server:", err)
+		logger.Fatalf("Failed to start server: %v", err)
 	}
 }
 
