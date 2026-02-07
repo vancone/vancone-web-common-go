@@ -46,7 +46,7 @@ func InitLogger() {
 		level,
 	)
 
-	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
+	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(1), zap.AddStacktrace(zap.ErrorLevel))
 
 	// 全局设置
 	SugaredLogger = logger.Sugar()
