@@ -16,7 +16,7 @@ func InitLogger() {
 		Filename:   "logs/app.log", // 日志文件路径
 		MaxSize:    10,             // 每个日志文件最大 10MB
 		MaxBackups: 5,              // 最多保留 5 个备份
-		MaxAge:     30,             // 文件最多保存 30 天
+		MaxAge:     7,              // 文件最多保存 7 天
 		LocalTime:  true,
 		Compress:   false, // 是否压缩（gzip）
 	}
