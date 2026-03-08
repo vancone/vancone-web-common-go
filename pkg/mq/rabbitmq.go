@@ -2,9 +2,6 @@ package mq
 
 import (
 	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
@@ -13,6 +10,13 @@ import (
 
 var RabbitMqConfig Config
 
+var (
+	conn    *amqp091.Connection
+	channel *amqp091.Channel
+)
+
+type MessageHandler func(d amqp091.Delivery)
+
 type Config struct {
 	Host     string
 	Port     int
@@ -20,73 +24,86 @@ type Config struct {
 	Password string
 }
 
-func Init(viper *viper.Viper, handler func(delivery amqp091.Delivery)) {
-	err := viper.UnmarshalKey("rabbitmq", &RabbitMqConfig)
+func Init(viper *viper.Viper) error {
+	var err error
+	err = viper.UnmarshalKey("rabbitmq", &RabbitMqConfig)
 	if err != nil {
 		logger.Errorf("viper unmarshal err: %v", err)
-		return
+		return err
 	}
 
-	// 连接 RabbitMQ 服务器
-	conn, err := amqp091.Dial(fmt.Sprintf("amqp://%s:%s@%s:%d/",
-		RabbitMqConfig.Username,
-		RabbitMqConfig.Password,
-		RabbitMqConfig.Host,
-		RabbitMqConfig.Port))
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
+	url := fmt.Sprintf("amqp://%s:%s@%s:%d/", RabbitMqConfig.Username, RabbitMqConfig.Password, RabbitMqConfig.Host, RabbitMqConfig.Port)
 
-	// 创建一个通道
-	ch, err := conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
+	conn, err = amqp091.Dial(url)
+	if err != nil {
+		logger.Error("Failed to connect to RabbitMQ:", err.Error())
+		return err
+	}
 
-	// 声明队列，如果队列不存在则会创建
-	q, err := ch.QueueDeclare(
-		fmt.Sprintf("datable-agent-sync-%s", viper.GetString("agent.id")), // 队列名称
-		false, // 持久化
-		false, // 自动删除（当最后一个消费者断开连接后）
-		false, // 排他性
-		false, // 非阻塞
-		nil,   // 额外参数
-	)
-	failOnError(err, "Failed to declare a queue")
+	channel, err = conn.Channel()
+	if err != nil {
+		logger.Error("Failed to open a channel:", err.Error())
+		return err
+	}
 
-	// 消费消息
-	msgs, err := ch.Consume(
-		q.Name, // 队列名称
-		"",     // 消费者标签
-		true,   // 自动确认
-		false,  // 非排他性
-		false,  // 不等待
-		false,  // 非阻塞
-		nil,    // 额外参数
-	)
-	failOnError(err, "Failed to register a consumer")
-
-	// 用于等待中断信号的通道
-	forever := make(chan bool)
-
-	// 启动一个 goroutine 处理接收到的消息
-	go func() {
-		for d := range msgs {
-			handler(d)
-		}
-	}()
-
-	logger.Info(" [*] Waiting for message")
-
-	// 等待中断信号优雅退出
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	<-sigChan
-	logger.Info("Exiting...")
-	forever <- true
-
+	logger.Info("Connected to RabbitMQ")
+	return nil
 }
 
 func failOnError(err error, msg string) {
 	if err != nil {
 		logger.Infof("%s: %s", msg, err)
 	}
+}
+
+func Subscribe(queueName string, handler MessageHandler) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	q, err := channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Error("Failed to declare a queue:", err.Error())
+		return err
+	}
+
+	msgs, err := channel.Consume(
+		q.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Error("Failed to register a consumer:", err.Error())
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			handler(d)
+		}
+	}()
+
+	logger.Infof("Subscribed to queue: %s", queueName)
+	return nil
+}
+
+func Close() {
+	if channel != nil {
+		channel.Close()
+	}
+	if conn != nil {
+		conn.Close()
+	}
+	logger.Info("RabbitMQ connection closed")
 }
