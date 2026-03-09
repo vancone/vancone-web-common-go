@@ -1,6 +1,7 @@
 package mq
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/rabbitmq/amqp091-go"
@@ -96,6 +97,48 @@ func Subscribe(queueName string, handler MessageHandler) error {
 
 	logger.Infof("Subscribed to queue: %s", queueName)
 	return nil
+}
+
+func Publish(queueName string, message []byte) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	q, err := channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Errorf("Failed to declare a queue: %v", err)
+		return err
+	}
+
+	err = channel.PublishWithContext(
+		context.Background(),
+		"",
+		q.Name,
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType: "text/plain",
+			Body:        message,
+		},
+	)
+	if err != nil {
+		logger.Errorf("Failed to publish a message: %v", err)
+		return err
+	}
+
+	logger.Debugf("Published message to queue: %s", queueName)
+	return nil
+}
+
+func PublishString(queueName string, message string) error {
+	return Publish(queueName, []byte(message))
 }
 
 func Close() {
