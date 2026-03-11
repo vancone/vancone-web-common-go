@@ -11,11 +11,6 @@ import (
 
 var RabbitMqConfig Config
 
-var (
-	conn    *amqp091.Connection
-	channel *amqp091.Channel
-)
-
 type MessageHandler func(d amqp091.Delivery)
 
 type Config struct {
@@ -25,39 +20,39 @@ type Config struct {
 	Password string
 }
 
-func Init(viper *viper.Viper) error {
+func Init(viper *viper.Viper) (*amqp091.Channel, error) {
 	var err error
 	err = viper.UnmarshalKey("rabbitmq", &RabbitMqConfig)
 	if err != nil {
 		logger.Errorf("viper unmarshal err: %v", err)
-		return err
+		return nil, err
 	}
 
 	url := fmt.Sprintf("amqp://%s:%s@%s:%d/", RabbitMqConfig.Username, RabbitMqConfig.Password, RabbitMqConfig.Host, RabbitMqConfig.Port)
 
-	conn, err = amqp091.Dial(url)
+	conn, err := amqp091.Dial(url)
 	if err != nil {
 		logger.Error("Failed to connect to RabbitMQ:", err.Error())
-		return err
+		return nil, err
 	}
 
-	channel, err = conn.Channel()
+	channel, err := conn.Channel()
 	if err != nil {
 		logger.Error("Failed to open a channel:", err.Error())
-		return err
+		return nil, err
 	}
 
-	logger.Info("Connected to RabbitMQ")
-	return nil
+	logger.Infof("Connected to RabbitMQ (%s:%d)", RabbitMqConfig.Host, RabbitMqConfig.Port)
+	return channel, nil
 }
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		logger.Infof("%s: %s", msg, err)
+		logger.Errorf("%s: %s", msg, err)
 	}
 }
 
-func Subscribe(queueName string, handler MessageHandler) error {
+func Subscribe(channel *amqp091.Channel, queueName string, handler MessageHandler) error {
 	if channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
 	}
@@ -99,7 +94,54 @@ func Subscribe(queueName string, handler MessageHandler) error {
 	return nil
 }
 
-func Publish(queueName string, message []byte) error {
+func SubscribeWithTTL(channel *amqp091.Channel, queueName string, ttl int64, handler MessageHandler) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	args := make(amqp091.Table)
+	if ttl > 0 {
+		args["x-expires"] = ttl
+	}
+
+	q, err := channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		args,
+	)
+	if err != nil {
+		logger.Error("Failed to declare a queue:", err.Error())
+		return err
+	}
+
+	msgs, err := channel.Consume(
+		q.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Error("Failed to register a consumer:", err.Error())
+		return err
+	}
+
+	go func() {
+		for d := range msgs {
+			handler(d)
+		}
+	}()
+
+	logger.Infof("Subscribed to queue: %s with TTL: %dms", queueName, ttl)
+	return nil
+}
+
+func Publish(channel *amqp091.Channel, queueName string, message []byte) error {
 	if channel == nil {
 		return fmt.Errorf("RabbitMQ channel not initialized")
 	}
@@ -137,11 +179,49 @@ func Publish(queueName string, message []byte) error {
 	return nil
 }
 
-func PublishString(queueName string, message string) error {
-	return Publish(queueName, []byte(message))
+func PublishString(channel *amqp091.Channel, queueName string, message string) error {
+	return Publish(channel, queueName, []byte(message))
 }
 
-func Close() {
+func PublishJSON(channel *amqp091.Channel, queueName string, message []byte) error {
+	if channel == nil {
+		return fmt.Errorf("RabbitMQ channel not initialized")
+	}
+
+	q, err := channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		logger.Errorf("Failed to declare a queue: %v", err)
+		return err
+	}
+
+	err = channel.PublishWithContext(
+		context.Background(),
+		"",
+		q.Name,
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType: "application/json",
+			Body:        message,
+		},
+	)
+	if err != nil {
+		logger.Errorf("Failed to publish a message: %v", err)
+		return err
+	}
+
+	logger.Debugf("Published JSON message to queue: %s", queueName)
+	return nil
+}
+
+func Close(channel *amqp091.Channel, conn *amqp091.Connection) {
 	if channel != nil {
 		channel.Close()
 	}
