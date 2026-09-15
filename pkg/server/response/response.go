@@ -1,11 +1,20 @@
 package response
 
 import (
-	"gorm.io/gorm"
 	"math"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-type ResponsePage[T any] struct {
+type Response[T any] struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+	Data    T      `json:"data,omitempty"`
+}
+
+type Page[T any] struct {
 	List       []T   `json:"list"`
 	PageNo     int64 `json:"pageNo"`
 	PageSize   int64 `json:"pageSize"`
@@ -13,7 +22,7 @@ type ResponsePage[T any] struct {
 	TotalPage  int64 `json:"totalPage"`
 }
 
-func Paginate[T any](db *gorm.DB, pageNo int, pageSize int, result *ResponsePage[T]) error {
+func Paginate[T any](db *gorm.DB, pageNo int, pageSize int, result *Page[T]) error {
 	if pageNo < 1 {
 		pageNo = 1
 	}
@@ -36,11 +45,36 @@ func Paginate[T any](db *gorm.DB, pageNo int, pageSize int, result *ResponsePage
 		return err
 	}
 
-	// Set response data
+	// Set server data
 	result.TotalCount = totalCount
 	result.TotalPage = int64(totalPage)
 	result.PageSize = int64(pageSize)
 	result.PageNo = int64(pageNo)
 
 	return nil
+}
+
+func Success[T any](ctx *gin.Context, data T) {
+	resp := Response[T]{
+		Code:    0,
+		Message: "success",
+		Data:    data,
+	}
+	ctx.JSON(http.StatusOK, resp)
+}
+
+func Fail[T any](ctx *gin.Context, code int, err error) {
+	resp := Response[T]{
+		Code:    code,
+		Message: err.Error(),
+	}
+	ctx.JSON(http.StatusInternalServerError, resp)
+}
+
+func New[T any](ctx *gin.Context, data T, err error) {
+	if err != nil {
+		Fail[T](ctx, -1, err)
+	} else {
+		Success(ctx, data)
+	}
 }
