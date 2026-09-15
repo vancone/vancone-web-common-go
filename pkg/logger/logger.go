@@ -8,7 +8,9 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-var SugaredLogger *zap.SugaredLogger
+// Default to a no-op logger so calls before InitLogger degrade quietly
+// instead of panicking on a nil pointer (e.g. error paths in unit tests).
+var SugaredLogger = zap.NewNop().Sugar()
 
 func InitLogger() {
 	// 配置日志写入：控制台 + 文件（带轮转）
